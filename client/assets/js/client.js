@@ -52,34 +52,38 @@ app.controller("chatCtrl",['$scope','socket','userService',function($scope,socke
     $scope.messages=$scope.publicMessages;//默认显示群聊
     $scope.users=[];
 
-    //登录进入聊天室
+    // 登录进入聊天室
     $scope.login=function(){
-        // coding there ...
+        socket.emit("addUser",{nickname:$scope.nickname});
     }
+// 自动滚到最新信息的位置
     $scope.scrollToBottom=function(){
-        // coding there ...
+        messageWrapper.scrollTop(messageWrapper[0].scrollHeight);
     }
 
-    $scope.postMessage=function(){
-        // coding there ...
-    }
-    $scope.setReceiver=function(receiver){
-        // coding there ...
-    }
+// here coding ...
 
-    // 收到登录结果
+//收到登录结果
     socket.on('userAddingResult',function(data){
-        // coding there ...
+        if(data.result){
+            $scope.userExisted=false;
+            $scope.hasLogined=true;
+        }else{//昵称被占用
+            $scope.userExisted=true;
+        }
     });
 
-    // 接收到欢迎新用户消息
+//接收到欢迎新用户消息
     socket.on('userAdded', function(data) {
-        // coding there ...
+        if(!$scope.hasLogined) return;
+        $scope.publicMessages.push({text:data.nickname,type:"welcome"});
+        $scope.users.push(data);
     });
 
-    // 接收到在线用户消息
+//接收到在线用户消息
     socket.on('allUser', function(data) {
-        // coding there ...
+        if(!$scope.hasLogined) return;
+        $scope.users=data;
     });
 
     // 接收到用户退出消息

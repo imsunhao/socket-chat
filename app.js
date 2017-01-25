@@ -19,7 +19,20 @@ io.on('connection',function(socket){
 
     //有新用户进入聊天室
     socket.on('addUser',function(data){
-        // coding there ...
+        if(connectedSockets[data.nickname]){
+            //昵称已被占用
+            socket.emit('userAddingResult',{result:false});
+        }else{
+            socket.emit('userAddingResult',{result:true});
+            socket.nickname=data.nickname;
+            //保存每个socket实例,发私信需要用
+            connectedSockets[socket.nickname]=socket;
+            allUsers.push(data);
+            //广播欢迎新用户,除新用户外都可看到
+            socket.broadcast.emit('userAdded',data);
+            //将所有在线用户发给新用户
+            socket.emit('allUser',allUsers);
+        }
     });
 
     //有用户发送新消息
