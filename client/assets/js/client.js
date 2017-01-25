@@ -154,35 +154,27 @@ app.controller("chatCtrl", ['$scope', 'socket', 'userService', function ($scope,
         }
     });
 
-// 新声明一个指令用于调用页面
-    app.directive('message', ['$timeout', function ($timeout) {
-        return {
-            restrict: 'E',
-            templateUrl: 'message.html',
-            scope: {
-                info: "=",
-                self: "=",
-                scrolltothis: "&"
-            },
-            link: function (scope, elem, attrs) {
-                scope.time = new Date();
-                $timeout(scope.scrolltothis);
-            }
-        };
-    }]).directive('user', ['$timeout', function ($timeout) {
-        return {
-            restrict: 'E',
-            templateUrl: 'user.html',
-            scope: {
-                info: "=",
-                iscurrentreceiver: "=",
-                setreceiver: "&"
-            }
-        };
-    }]);
+
+
+
 }]);
 
-app.directive('user', ['$timeout', function ($timeout) {
+// 新声明一个指令用于调用页面
+app.directive('message', ['$timeout', function ($timeout) {
+    return {
+        restrict: 'E',
+        templateUrl: 'message.html',
+        scope: {
+            info: "=",
+            self: "=",
+            scrolltothis: "&"
+        },
+        link: function (scope, elem, attrs) {
+            scope.time = new Date();
+            $timeout(scope.scrolltothis);
+        }
+    };
+}]).directive('user', ['$timeout', function ($timeout) {
     return {
         restrict: 'E',
         templateUrl: 'user.html',
@@ -193,3 +185,4 @@ app.directive('user', ['$timeout', function ($timeout) {
         }
     };
 }]);
+
