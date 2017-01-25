@@ -1,24 +1,24 @@
 /**
  * Created by 孙颢pc on 2017/1/25.
  */
-var app=angular.module("chatRoom",[]);
+var app = angular.module("chatRoom", []);
 
-app.factory('socket', function($rootScope) {
+app.factory('socket', function ($rootScope) {
     var socket = io(); //默认连接部署网站的服务器
     return {
-        on: function(eventName, callback) {
-            socket.on(eventName, function() {
+        on: function (eventName, callback) {
+            socket.on(eventName, function () {
                 var args = arguments;
-                $rootScope.$apply(function() {
+                $rootScope.$apply(function () {
                     callback.apply(socket, args);
                 });
             });
         },
-        emit: function(eventName, data, callback) {
-            socket.emit(eventName, data, function() {
+        emit: function (eventName, data, callback) {
+            socket.emit(eventName, data, function () {
                 var args = arguments;
-                $rootScope.$apply(function() {
-                    if(callback) {
+                $rootScope.$apply(function () {
+                    if (callback) {
                         callback.apply(socket, args);
                     }
                 });
@@ -27,118 +27,125 @@ app.factory('socket', function($rootScope) {
     };
 });
 
-app.factory('userService', function($rootScope) {
+app.factory('userService', function ($rootScope) {
     return {
-        get: function(users,nickname) {
-            if(users instanceof Array){
-                for(var i=0;i<users.length;i++){
-                    if(users[i].nickname===nickname){
+        get: function (users, nickname) {
+            if (users instanceof Array) {
+                for (var i = 0; i < users.length; i++) {
+                    if (users[i].nickname === nickname) {
                         return users[i];
                     }
                 }
-            }else{
+            } else {
                 return null;
             }
         }
     };
 });
 
-app.controller("chatCtrl",['$scope','socket','userService',function($scope,socket,userService){
-    var messageWrapper= $('.message-wrapper');
-    $scope.hasLogined=false;
-    $scope.receiver="";//默认是群聊
-    $scope.publicMessages=[];//群聊消息
-    $scope.privateMessages={};//私信消息
-    $scope.messages=$scope.publicMessages;//默认显示群聊
-    $scope.users=[];
+app.controller("chatCtrl", ['$scope', 'socket', 'userService', function ($scope, socket, userService) {
+    var messageWrapper = $('.message-wrapper');
+    $scope.hasLogined = false;
+    $scope.receiver = "";//默认是群聊
+    $scope.publicMessages = [];//群聊消息
+    $scope.privateMessages = {};//私信消息
+    $scope.messages = $scope.publicMessages;//默认显示群聊
+    $scope.users = [];
 
     // 登录进入聊天室
-    $scope.login=function(){
-        socket.emit("addUser",{nickname:$scope.nickname});
+    $scope.login = function () {
+        socket.emit("addUser", {nickname: $scope.nickname});
     }
 // 自动滚到最新信息的位置
-    $scope.scrollToBottom=function(){
+    $scope.scrollToBottom = function () {
         messageWrapper.scrollTop(messageWrapper[0].scrollHeight);
     }
 
 // here coding ...
 
 //收到登录结果
-    socket.on('userAddingResult',function(data){
-        if(data.result){
-            $scope.userExisted=false;
-            $scope.hasLogined=true;
-        }else{//昵称被占用
-            $scope.userExisted=true;
+    socket.on('userAddingResult', function (data) {
+        if (data.result) {
+            $scope.userExisted = false;
+            $scope.hasLogined = true;
+        } else {//昵称被占用
+            $scope.userExisted = true;
         }
     });
 
 //接收到欢迎新用户消息
-    socket.on('userAdded', function(data) {
-        if(!$scope.hasLogined) return;
-        $scope.publicMessages.push({text:data.nickname,type:"welcome"});
+    socket.on('userAdded', function (data) {
+        if (!$scope.hasLogined) return;
+        $scope.publicMessages.push({text: data.nickname, type: "welcome"});
         $scope.users.push(data);
     });
 
 //接收到在线用户消息
-    socket.on('allUser', function(data) {
-        if(!$scope.hasLogined) return;
-        $scope.users=data;
+    socket.on('allUser', function (data) {
+        if (!$scope.hasLogined) return;
+        $scope.users = data;
     });
 
-    // 接收到用户退出消息
-    socket.on('userRemoved', function(data) {
-        // coding there ...
+    //接收到用户退出消息
+    socket.on('userRemoved', function (data) {
+        if (!$scope.hasLogined) return;
+        $scope.publicMessages.push({text: data.nickname, type: "bye"});
+        for (var i = 0; i < $scope.users.length; i++) {
+            if ($scope.users[i].nickname == data.nickname) {
+                $scope.users.splice(i, 1);
+                return;
+            }
+        }
     });
 
-    $scope.postMessage=function(){
-        var msg={text:$scope.words, type:"normal", from:$scope.nickname, to:$scope.receiver};
-        var rec=$scope.receiver;
-        if(rec){
-            if(!$scope.privateMessages[rec]){
-                $scope.privateMessages[rec]=[];
+    $scope.postMessage = function () {
+        var msg = {text: $scope.words, type: "normal", from: $scope.nickname, to: $scope.receiver};
+        var rec = $scope.receiver;
+        if (rec) {
+            if (!$scope.privateMessages[rec]) {
+                $scope.privateMessages[rec] = [];
             }
             $scope.privateMessages[rec].push(msg);
-        }else{
+        } else {
             $scope.publicMessages.push(msg);
         }
-        $scope.words="";
-        if(rec!==$scope.nickname) {
+        $scope.words = "";
+        if (rec !== $scope.nickname) {
             socket.emit("addMessage", msg);
         }
     }
-    $scope.setReceiver=function(receiver){
-        $scope.receiver=receiver;
-        if(receiver){
-            if(!$scope.privateMessages[receiver]){
-                $scope.privateMessages[receiver]=[];
+    $scope.setReceiver = function (receiver) {
+        $scope.receiver = receiver;
+        if (receiver) {
+            if (!$scope.privateMessages[receiver]) {
+                $scope.privateMessages[receiver] = [];
             }
-            $scope.messages=$scope.privateMessages[receiver];
-        }else{
-            $scope.messages=$scope.publicMessages;
+            $scope.messages = $scope.privateMessages[receiver];
+        } else {
+            $scope.messages = $scope.publicMessages;
         }
-        var user=userService.get($scope.users,receiver);
-        if(user){
-            user.hasNewMessage=false;
+        var user = userService.get($scope.users, receiver);
+        if (user) {
+            user.hasNewMessage = false;
         }
     }
 
 // here coding ...
 
 // 接收到新消息
-    socket.on('messageAdded', function(data) {
-        if(!$scope.hasLogined) return;
-        if(data.to){ //私信
-            if(!$scope.privateMessages[data.from]){
-                $scope.privateMessages[data.from]=[];
+    socket.on('messageAdded', function (data) {
+        if (!$scope.hasLogined) return;
+        if (data.to) { //私信
+            if (!$scope.privateMessages[data.from]) {
+                $scope.privateMessages[data.from] = [];
             }
             $scope.privateMessages[data.from].push(data);
-        }else{//群发
+        } else {//群发
             $scope.publicMessages.push(data);
         }
-        var fromUser=userService.get($scope.users,data.from);
-        var toUser=userService.get($scope.users,data.to);
-        if($scope.receiver!==data.to) {//与来信方不是正在聊天当中才提示新消息
+        var fromUser = userService.get($scope.users, data.from);
+        var toUser = userService.get($scope.users, data.to);
+        if ($scope.receiver !== data.to) {//与来信方不是正在聊天当中才提示新消息
             if (fromUser && toUser.nickname) {
                 fromUser.hasNewMessage = true;//私信
             } else {
@@ -148,41 +155,41 @@ app.controller("chatCtrl",['$scope','socket','userService',function($scope,socke
     });
 
 // 新声明一个指令用于调用页面
-    app.directive('message', ['$timeout',function($timeout) {
+    app.directive('message', ['$timeout', function ($timeout) {
         return {
             restrict: 'E',
             templateUrl: 'message.html',
-            scope:{
-                info:"=",
-                self:"=",
-                scrolltothis:"&"
+            scope: {
+                info: "=",
+                self: "=",
+                scrolltothis: "&"
             },
-            link:function(scope, elem, attrs){
-                scope.time=new Date();
+            link: function (scope, elem, attrs) {
+                scope.time = new Date();
                 $timeout(scope.scrolltothis);
             }
         };
-    }]).directive('user', ['$timeout',function($timeout) {
+    }]).directive('user', ['$timeout', function ($timeout) {
         return {
             restrict: 'E',
             templateUrl: 'user.html',
-            scope:{
-                info:"=",
-                iscurrentreceiver:"=",
-                setreceiver:"&"
+            scope: {
+                info: "=",
+                iscurrentreceiver: "=",
+                setreceiver: "&"
             }
         };
     }]);
 }]);
 
-app.directive('user', ['$timeout',function($timeout) {
+app.directive('user', ['$timeout', function ($timeout) {
     return {
         restrict: 'E',
         templateUrl: 'user.html',
-        scope:{
-            info:"=",
-            iscurrentreceiver:"=",
-            setreceiver:"&"
+        scope: {
+            info: "=",
+            iscurrentreceiver: "=",
+            setreceiver: "&"
         }
     };
 }]);

@@ -48,8 +48,19 @@ io.on('connection',function(socket){
 
     //有用户退出聊天室
     socket.on('disconnect', function () {
-        // coding there ...
-    });
+            //广播有用户退出
+            socket.broadcast.emit('userRemoved', {
+                nickname: socket.nickname
+            });
+            for(var i=0;i<allUsers.length;i++){
+                if(allUsers[i].nickname==socket.nickname){
+                    allUsers.splice(i,1);
+                }
+            }
+            //删除对应的socket实例
+            delete connectedSockets[socket.nickname];
+        }
+    );
 });
 
 http.listen(6060, function () {
