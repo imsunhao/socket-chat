@@ -37,7 +37,13 @@ io.on('connection',function(socket){
 
     //有用户发送新消息
     socket.on('addMessage',function(data){
-        // coding there ...
+        if(data.to){
+            //发给特定用户
+            connectedSockets[data.to].emit('messageAdded',data);
+        }else{
+            //群发-广播消息,除原发送者外都可看到
+            socket.broadcast.emit('messageAdded',data);
+        }
     });
 
     //有用户退出聊天室

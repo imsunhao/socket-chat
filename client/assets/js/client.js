@@ -91,8 +91,98 @@ app.controller("chatCtrl",['$scope','socket','userService',function($scope,socke
         // coding there ...
     });
 
-    // 接收到新消息
+    $scope.postMessage=function(){
+        var msg={text:$scope.words, type:"normal", from:$scope.nickname, to:$scope.receiver};
+        var rec=$scope.receiver;
+        if(rec){
+            if(!$scope.privateMessages[rec]){
+                $scope.privateMessages[rec]=[];
+            }
+            $scope.privateMessages[rec].push(msg);
+        }else{
+            $scope.publicMessages.push(msg);
+        }
+        $scope.words="";
+        if(rec!==$scope.nickname) {
+            socket.emit("addMessage", msg);
+        }
+    }
+    $scope.setReceiver=function(receiver){
+        $scope.receiver=receiver;
+        if(receiver){
+            if(!$scope.privateMessages[receiver]){
+                $scope.privateMessages[receiver]=[];
+            }
+            $scope.messages=$scope.privateMessages[receiver];
+        }else{
+            $scope.messages=$scope.publicMessages;
+        }
+        var user=userService.get($scope.users,receiver);
+        if(user){
+            user.hasNewMessage=false;
+        }
+    }
+
+// here coding ...
+
+// 接收到新消息
     socket.on('messageAdded', function(data) {
-        // coding there ...
+        if(!$scope.hasLogined) return;
+        if(data.to){ //私信
+            if(!$scope.privateMessages[data.from]){
+                $scope.privateMessages[data.from]=[];
+            }
+            $scope.privateMessages[data.from].push(data);
+        }else{//群发
+            $scope.publicMessages.push(data);
+        }
+        var fromUser=userService.get($scope.users,data.from);
+        var toUser=userService.get($scope.users,data.to);
+        if($scope.receiver!==data.to) {//与来信方不是正在聊天当中才提示新消息
+            if (fromUser && toUser.nickname) {
+                fromUser.hasNewMessage = true;//私信
+            } else {
+                toUser.hasNewMessage = true;//群发
+            }
+        }
     });
+
+// 新声明一个指令用于调用页面
+    app.directive('message', ['$timeout',function($timeout) {
+        return {
+            restrict: 'E',
+            templateUrl: 'message.html',
+            scope:{
+                info:"=",
+                self:"=",
+                scrolltothis:"&"
+            },
+            link:function(scope, elem, attrs){
+                scope.time=new Date();
+                $timeout(scope.scrolltothis);
+            }
+        };
+    }]).directive('user', ['$timeout',function($timeout) {
+        return {
+            restrict: 'E',
+            templateUrl: 'user.html',
+            scope:{
+                info:"=",
+                iscurrentreceiver:"=",
+                setreceiver:"&"
+            }
+        };
+    }]);
+}]);
+
+app.directive('user', ['$timeout',function($timeout) {
+    return {
+        restrict: 'E',
+        templateUrl: 'user.html',
+        scope:{
+            info:"=",
+            iscurrentreceiver:"=",
+            setreceiver:"&"
+        }
+    };
 }]);
